@@ -55,6 +55,8 @@ export default function Home() {
           <input type="submit" value="Get paramters" />
         </form>
         <div className={styles.result}>{result?.content}</div>
+
+        <h2>Message</h2>
         <pre>{JSON.stringify(result, null, 2)}</pre>
       </main>
     </div>

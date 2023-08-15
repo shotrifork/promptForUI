@@ -61,6 +61,8 @@ const messages = [
   },
 ];
 
+const functionsFound = [];
+
 export default async function (req, res) {
   if (!configuration.apiKey) {
     res.status(500).json({
@@ -94,11 +96,24 @@ export default async function (req, res) {
       functions,
       temperature: 0.6,
     });
+    const chatCompletionNoFunctions = await openai.createChatCompletion({
+      model: "gpt-3.5-turbo",
+      messages,
+      temperature: 0.6,
+    });
     const message = chatCompletion.data.choices[0].message;
+    const messageNoFunctions =
+      chatCompletionNoFunctions.data.choices[0].message;
+    const functionUsed = {};
+    console.log("message: " + JSON.stringify(messageNoFunctions, null, 2));
 
     if (message.function_call) {
       const name = message.function_call.name;
       const args = JSON.parse(message.function_call.arguments);
+      functionUsed.name = name;
+      functionUsed.args = args;
+      functionUsed.result = {};
+
       if (name === "getDistanceBetweenAddresses") {
         const { from, to } = args;
 
@@ -111,7 +126,13 @@ export default async function (req, res) {
 
           const distance = haversineDistance(coord1, coord2);
           const dist = distance.toFixed(2);
-          message.content = `Afstand mellem ${from} og ${to} i luftlinje er ca. ${dist} km`;
+          functionUsed.result[from] = coord1;
+          functionUsed.result[to] = coord2;
+          functionUsed.result.dist = dist;
+
+          const content = `Afstand mellem ${from} og ${to} i luftlinje er ca. ${dist} km`;
+          message.content = content;
+          functionsFound.push(message.content);
         } catch (e) {
           message.content = e.message;
         }
@@ -119,12 +140,14 @@ export default async function (req, res) {
         const { location, unit } = args;
         try {
           const data = await getWeatherData(location, unit);
+          functionUsed.result = data;
           const content = `Temperatur i ${location} er ca. ${Math.round(
             data.temperature - 273.15
           )} °, det er ${data.description} med en luftfugtighed på ${
             data.humidity
           }`;
           message.content = content;
+          functionsFound.push(message.content);
         } catch (e) {
           message.content = e.message;
         }
@@ -138,7 +161,7 @@ export default async function (req, res) {
 
     console.dir(messages);
 
-    res.status(200).json({ result: message });
+    res.status(200).json({ result: { ...message, functionUsed } });
 
     /*
       {
