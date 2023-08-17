@@ -15,7 +15,7 @@ export async function fetchYelpData(term = "kaffe", location = "Aarhus") {
   try {
     const response = await client.search(searchRequest);
     console.dir(response);
-    return response.jsonBody.businesses[0];
+    return response.jsonBody;
   } catch (error) {
     console.error(error);
     return null;
@@ -46,19 +46,30 @@ export const getFetchYelpDataDescription = () => {
 };
 
 export const parseYelpSearchResponse = (response, location, term) => {
-  if (response !== undefined && response !== null) {
+  if (
+    response !== undefined &&
+    response !== null &&
+    response.businesses.length > 0
+  ) {
+    let selectedBusiness = response.businesses[0];
+    let openBusinesses = response.businesses.filter(
+      (business) => business.is_closed === false
+    );
+    const anyBusinessOpen = openBusinesses.length > 0;
+    selectedBusiness = anyBusinessOpen ? openBusinesses[0] : selectedBusiness;
+
     const useful = {
-      name: response.name,
-      image_url: response.image_url,
-      url: response.url,
-      review_count: response.review_count,
-      rating: response.rating,
-      coordinates: response.coordinates,
-      price: response.price,
-      location: response.location,
-      phone: response.phone,
-      display_phone: response.display_phone,
-      distance: response.distance,
+      name: selectedBusiness.name,
+      image_url: selectedBusiness.image_url,
+      url: selectedBusiness.url,
+      review_count: selectedBusiness.review_count,
+      rating: selectedBusiness.rating,
+      coordinates: selectedBusiness.coordinates,
+      price: selectedBusiness.price,
+      location: selectedBusiness.location,
+      phone: selectedBusiness.phone,
+      display_phone: selectedBusiness.display_phone,
+      distance: selectedBusiness.distance,
     };
     let distance = useful.distance;
     if (distance > 1000) {
@@ -68,11 +79,18 @@ export const parseYelpSearchResponse = (response, location, term) => {
     }
 
     const address = `${useful.location.display_address.join(", ")}`;
-    const info = `${useful.display_phone} - ${distance} fra ${location}`;
-    const description = `${useful.name} - ${address} - ${info}`;
-    return `Prøv her: ${description}`;
+    const info = `<a href="phone:${useful.phone}">${useful.display_phone}</a> - ${distance} fra ${location}`;
+    const description = `<a href="${useful.url}" target="_blank">${useful.name}</a> - ${address} - ${info}`;
+    const preText = anyBusinessOpen
+      ? `<h2>Jeg fandt ${openBusinesses.length} åbne steder Her er det første</h2>`
+      : `<h2>Jeg fandt ${openBusinesses.length} steder, dog ingen åbne. Her er en der en, der dog er lukker nu.</h2>`;
+    const postText = anyBusinessOpen ? ", den er åben nu" : "";
+    const image = useful.image_url
+      ? `<div><img style="width: 200px; margin: .5em 0;" src="${useful.image_url}" /></div>`
+      : "";
+    return `${preText}${image}<br/>${description}${postText}`;
   } else {
-    return `Jeg kunne desværre ikke finde noget om "${term}" i ${location}`;
+    return null;
   }
 };
 

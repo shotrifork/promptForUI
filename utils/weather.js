@@ -10,16 +10,21 @@ export const getWeatherData = async (location, units) => {
     console.log(url);
 
     const response = await axios.get(url);
-    const data = response.data;
 
-    return {
-      location: data.name,
-      temperature: data.main.temp,
-      description: data.weather[0].description,
-      humidity: data.main.humidity,
+    const useful = {
+      location: response.data.name,
+      temperature: response.data.main.temp,
+      description: response.data.weather[0].description,
+      humidity: response.data.main.humidity,
     };
+    const result = `<h2>Temperatur i ${location} er ca. ${Math.round(
+      useful.temperature - 273.15
+    )} °</h2>
+    Det er ${useful.description} med en luftfugtighed på ${useful.humidity}%`;
+    return result;
   } catch (error) {
     console.error("Error fetching weather data:", error);
+    return null;
   }
 };
 

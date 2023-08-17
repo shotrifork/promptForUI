@@ -65,3 +65,8 @@
   font-weight: bold;
   margin-top: 40px;
 }
+.result textarea {
+  width: 50vw;
+  height: 20vh;
+  
+}

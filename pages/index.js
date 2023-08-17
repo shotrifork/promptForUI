@@ -1,12 +1,14 @@
 import Head from "next/head";
-import styles from "./index.module.css";
 import { useState } from "react";
+import styles from "./index.module.css";
 
 export default function Home() {
   const [promptInput, setPromptInput] = useState("");
   const [result, setResult] = useState();
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit(event) {
+    setLoading(true);
     event.preventDefault();
     try {
       const response = await fetch("/api/generate", {
@@ -26,12 +28,11 @@ export default function Home() {
       }
 
       setResult(data.result);
-      setPromptInput("");
+      setPromptInput(data.result.foundResult ? "" : promptInput);
     } catch (error) {
-      // Consider implementing your own error handling logic here
       console.error(error);
-      alert(error.message);
     }
+    setLoading(false);
   }
 
   return (
@@ -52,12 +53,24 @@ export default function Home() {
             value={promptInput}
             onChange={(e) => setPromptInput(e.target.value)}
           />
-          <input type="submit" value="Get paramters" />
-        </form>
-        <div className={styles.result}>{result?.content}</div>
 
-        <h2>Message</h2>
-        <pre>{JSON.stringify(result, null, 2)}</pre>
+          <input
+            type="submit"
+            value={loading ? "Prompter ChatGPT..." : "Prompt ChatGPT"}
+            disabled={loading ? "disabled" : ""}
+          />
+        </form>
+        {/* <div className={styles.result}>{result?.content}</div> */}
+        <p dangerouslySetInnerHTML={{ __html: result?.content }}></p>
+
+        {result ? (
+          <div className={styles.result}>
+            <h2>Message</h2>
+            <textarea>{JSON.stringify(result, null, 2)}</textarea>
+          </div>
+        ) : (
+          ""
+        )}
       </main>
     </div>
   );

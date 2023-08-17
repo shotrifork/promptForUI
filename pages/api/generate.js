@@ -10,6 +10,9 @@ import {
   parseYelpSearchResponse,
 } from "../../utils/yelp";
 
+import requestIp from "request-ip";
+import { getIPInfo } from "../../utils/ipinfo";
+
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -25,13 +28,13 @@ const messages = [
   {
     role: "system",
     content:
-      "You server as a layer before the UI of a webapp. You role is to understand questions through a prompt and identify which functions need to be called and the ensure that relevant parameters exist. If a question falls out of known functions (get weather data, get distance or get useful informations about businesses), kindly advice the user to ask relevant question. Update and correct the given locations so that they are correct, for instance Hærning should be Herning. Der samtales på Dansk.",
+      "You server as a layer before the UI of a webapp. You role is to understand questions through a prompt and identify which functions need to be called and the ensure that relevant parameters exist. If a question falls out of known functions (get weather data, get distance or get useful informations about businesses), kindly advice the user to ask relevant question. Update and correct the given locations so that they are correct, for instance Hærning should be Herning. Der samtales på Dansk. Hvis du er i tvivl om land, så brug Danmark",
   },
 ];
 
 const functionsFound = [];
 
-export default async function (req, res) {
+export default async function handler(req, res) {
   if (!configuration.apiKey) {
     res.status(500).json({
       error: {
@@ -41,6 +44,10 @@ export default async function (req, res) {
     });
     return;
   }
+
+  const userIP = requestIp.getClientIp(req);
+  const ipInfo = await getIPInfo(userIP);
+  const country = ipInfo.country ?? "DK";
 
   const prompt = req.body.prompt || "";
   if (prompt.trim().length === 0) {
@@ -57,7 +64,6 @@ export default async function (req, res) {
   });
 
   try {
-    console.dir(messages);
     const chatCompletion = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
       messages,
@@ -76,6 +82,8 @@ export default async function (req, res) {
     // console.log("message: " + JSON.stringify(messageNoFunctions, null, 2));
 
     const functionUsed = {};
+
+    let foundResult = false;
 
     if (message.function_call) {
       const name = message.function_call.name;
@@ -96,41 +104,42 @@ export default async function (req, res) {
 
           message.content = content;
           functionsFound.push(message.content);
+          foundResult = true;
         } catch (e) {
           message.content = e.message;
         }
       } else if (name === "getWeatherData") {
         const { location, unit } = args;
         try {
-          const data = await getWeatherData(location, unit);
-          functionUsed.result = data;
-
-          const content = `Temperatur i ${location} ${
-            data.location !== location ? ` (${data.location})` : ""
-          } er ca. ${Math.round(data.temperature - 273.15)} °, det er ${
-            data.description
-          } med en luftfugtighed på ${data.humidity}`;
-          message.content = content;
-          functionsFound.push(message.content);
+          const result = await getWeatherData(location, unit);
+          if (result !== null) {
+            functionUsed.result = result;
+            message.content = result;
+            functionsFound.push(message.content);
+            foundResult = true;
+          }
         } catch (e) {
           message.content = e.message;
         }
       } else if (name === "fetchYelpData") {
         try {
           const { location, term } = args;
-          const information = await fetchYelpData(term, location);
-          functionUsed.result = information;
-          message.content = parseYelpSearchResponse(
-            information,
-            location,
-            term
-          );
-          functionsFound.push(message.content);
+          const result = await fetchYelpData(term, location);
+          if (result !== null && result.total > 0) {
+            functionUsed.result = result;
+            message.content = parseYelpSearchResponse(result, location, term);
+            functionsFound.push(message.content);
+            foundResult = true;
+          } else {
+            message.content = `Jeg kunne ikke finde nogle resultater for ${term} i ${location}`;
+          }
         } catch (e) {
           message.content = e.message;
         }
       }
-      messages.push(message);
+      if (foundResult) {
+        messages.push(message);
+      }
     } else {
       messages.pop();
       message.content =
@@ -139,7 +148,7 @@ export default async function (req, res) {
 
     console.dir(messages);
 
-    res.status(200).json({ result: { ...message, functionUsed } });
+    res.status(200).json({ result: { ...message, functionUsed, foundResult } });
   } catch (error) {
     // Consider adjusting the error handling logic for your use case
     if (error.response) {
