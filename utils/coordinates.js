@@ -58,3 +58,26 @@ function degreesToRadians(degrees) {
 //     console.log(`distance: ${distance}`);
 //     return distance;
 //   }
+
+export const getDistanceBetweenAddressesDescription = () => {
+  return {
+    name: "getDistanceBetweenAddresses",
+    description: "The user wants to get the distance between two locations",
+    parameters: {
+      type: "object",
+      properties: {
+        from: {
+          type: "string",
+          description:
+            "The address of the 'from' location, for instance Grenåvej 11, 8541 Skødstrup, Danmark",
+        },
+        to: {
+          type: "string",
+          description:
+            "The address of the 'from' location, for instance Grenåvej 11, 8541 Skødstrup, Danmark",
+        },
+      },
+      required: ["from", "to"],
+    },
+  };
+};

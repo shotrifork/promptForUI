@@ -1,7 +1,14 @@
 import { Configuration, OpenAIApi } from "openai";
-
-import { getDistanceBetweenAddresses } from "../../utils/coordinates";
-import { getWeatherData } from "../../utils/weather";
+import {
+  getDistanceBetweenAddresses,
+  getDistanceBetweenAddressesDescription,
+} from "../../utils/coordinates";
+import { getWeatherData, getWeatherDataDescription } from "../../utils/weather";
+import {
+  fetchYelpData,
+  getFetchYelpDataDescription,
+  parseYelpSearchResponse,
+} from "../../utils/yelp";
 
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
@@ -9,51 +16,16 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 const functions = [
-  {
-    name: "getWeatherData",
-    description: "Get the current weather in a given location",
-    parameters: {
-      type: "object",
-      properties: {
-        location: {
-          type: "string",
-          description: "The city and state, e.g., New York, NY",
-        },
-        unit: {
-          type: "string",
-          enum: ["celsius", "fahrenheit"],
-          default: "celsius",
-        },
-      },
-      required: ["location", "unit"],
-    },
-  },
-  {
-    name: "getDistanceBetweenAddresses",
-    description: "The user wants to get the distance between two locations",
-    parameters: {
-      type: "object",
-      properties: {
-        from: {
-          type: "string",
-          description:
-            "The address of the 'from' location, for instance Grenåvej 11, 8541 Skødstrup, Danmark",
-        },
-        to: {
-          type: "string",
-          description:
-            "The address of the 'from' location, for instance Grenåvej 11, 8541 Skødstrup, Danmark",
-        },
-      },
-      required: ["from", "to"],
-    },
-  },
+  getWeatherDataDescription(),
+  getDistanceBetweenAddressesDescription(),
+  getFetchYelpDataDescription(),
 ];
+console.log(functions);
 const messages = [
   {
     role: "system",
     content:
-      "You server as a layer before the UI of a webapp. You role is to understand questions through a prompt and identify which functions need to be called and the ensure that relevant parameters exist. If a question falls out of known functions (get weather data and get distance), kindly advice the user to ask relevant question. Update and correct the given locations so that they are correct, for instance Hærning should be Herning. Der samtales på Dansk.",
+      "You server as a layer before the UI of a webapp. You role is to understand questions through a prompt and identify which functions need to be called and the ensure that relevant parameters exist. If a question falls out of known functions (get weather data, get distance or get useful informations about businesses), kindly advice the user to ask relevant question. Update and correct the given locations so that they are correct, for instance Hærning should be Herning. Der samtales på Dansk.",
   },
 ];
 
@@ -101,9 +73,9 @@ export default async function (req, res) {
     // });
     // const messageNoFunctions =
     //   chatCompletionNoFunctions.data.choices[0].message;
+    // console.log("message: " + JSON.stringify(messageNoFunctions, null, 2));
 
     const functionUsed = {};
-    console.log("message: " + JSON.stringify(messageNoFunctions, null, 2));
 
     if (message.function_call) {
       const name = message.function_call.name;
@@ -133,12 +105,26 @@ export default async function (req, res) {
           const data = await getWeatherData(location, unit);
           functionUsed.result = data;
 
-          const content = `Temperatur i ${location} er ca. ${Math.round(
-            data.temperature - 273.15
-          )} °, det er ${data.description} med en luftfugtighed på ${
-            data.humidity
-          }`;
+          const content = `Temperatur i ${location} ${
+            data.location !== location ? ` (${data.location})` : ""
+          } er ca. ${Math.round(data.temperature - 273.15)} °, det er ${
+            data.description
+          } med en luftfugtighed på ${data.humidity}`;
           message.content = content;
+          functionsFound.push(message.content);
+        } catch (e) {
+          message.content = e.message;
+        }
+      } else if (name === "fetchYelpData") {
+        try {
+          const { location, term } = args;
+          const information = await fetchYelpData(term, location);
+          functionUsed.result = information;
+          message.content = parseYelpSearchResponse(
+            information,
+            location,
+            term
+          );
           functionsFound.push(message.content);
         } catch (e) {
           message.content = e.message;
@@ -148,7 +134,7 @@ export default async function (req, res) {
     } else {
       messages.pop();
       message.content =
-        "Jeg er optimeret til at hjælpe med to opgaver: Find vejret for en by eller afstanden imellem to byer.";
+        "Jeg er optimeret til at hjælpe med tre opgaver: Find vejret for en by, find afstanden imellem to byer eller nyttige oplysninger om forretninger ved lokationen.";
     }
 
     console.dir(messages);

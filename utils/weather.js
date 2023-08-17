@@ -22,3 +22,25 @@ export const getWeatherData = async (location, units) => {
     console.error("Error fetching weather data:", error);
   }
 };
+
+export const getWeatherDataDescription = () => {
+  return {
+    name: "getWeatherData",
+    description: "Get the current weather in a given location",
+    parameters: {
+      type: "object",
+      properties: {
+        location: {
+          type: "string",
+          description: "The city and state, e.g., New York, NY",
+        },
+        unit: {
+          type: "string",
+          enum: ["celsius", "fahrenheit"],
+          default: "celsius",
+        },
+      },
+      required: ["location", "unit"],
+    },
+  };
+};
