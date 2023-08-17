@@ -143,12 +143,14 @@ export default async function handler(req, res) {
     } else {
       messages.pop();
       message.content =
-        "Jeg er optimeret til at hjælpe med tre opgaver: Find vejret for en by, find afstanden imellem to byer eller nyttige oplysninger om forretninger ved lokationen.";
+        "<h2>Jeg er optimeret til at hjælpe med tre opgaver</h2><ul><li>Find vejret for en by</li><li>Find afstanden imellem to byer</li><li>Find nyttige oplysninger om forretninger ved lokationen</li></ul>";
     }
 
-    console.dir(messages);
+    console.dir({ result: { ...message, functionUsed, foundResult } });
 
-    res.status(200).json({ result: { ...message, functionUsed, foundResult } });
+    res
+      .status(200)
+      .json({ ...{ result: { ...message, functionUsed, foundResult } } });
   } catch (error) {
     // Consider adjusting the error handling logic for your use case
     if (error.response) {

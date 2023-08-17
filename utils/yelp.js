@@ -84,7 +84,7 @@ export const parseYelpSearchResponse = (response, location, term) => {
     const preText = anyBusinessOpen
       ? `<h2>Jeg fandt ${openBusinesses.length} åbne steder Her er det første</h2>`
       : `<h2>Jeg fandt ${openBusinesses.length} steder, dog ingen åbne. Her er en der en, der dog er lukker nu.</h2>`;
-    const postText = anyBusinessOpen ? ", den er åben nu" : "";
+    const postText = "";
     const image = useful.image_url
       ? `<div><img style="width: 200px; margin: .5em 0;" src="${useful.image_url}" /></div>`
       : "";

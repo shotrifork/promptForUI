@@ -49,7 +49,7 @@ export default function Home() {
           <input
             type="text"
             name="prompt"
-            placeholder="Enter a question"
+            placeholder="Tast et prompt"
             value={promptInput}
             onChange={(e) => setPromptInput(e.target.value)}
           />
@@ -60,13 +60,12 @@ export default function Home() {
             disabled={loading ? "disabled" : ""}
           />
         </form>
-        {/* <div className={styles.result}>{result?.content}</div> */}
         <p dangerouslySetInnerHTML={{ __html: result?.content }}></p>
 
         {result ? (
           <div className={styles.result}>
             <h2>Message</h2>
-            <textarea>{JSON.stringify(result, null, 2)}</textarea>
+            <pre>{JSON.stringify(result, null, 2)}</pre>
           </div>
         ) : (
           ""

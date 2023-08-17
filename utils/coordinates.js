@@ -9,7 +9,7 @@ export const getDistanceBetweenAddresses = async (from, to) => {
 
   const distance = haversineDistance(fromCoord, toCoord);
   const dist = distance.toFixed(2);
-  const content = `Afstand mellem ${from} og ${to} i luftlinje er ca. ${dist} km`;
+  const content = `<h2>Afstand mellem ${from} og ${to} i luftlinje er ca. ${dist} km</h2>`;
   console.log(content, dist);
   return { content, fromCoord, toCoord, dist };
 };
