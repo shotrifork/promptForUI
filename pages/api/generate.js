@@ -84,6 +84,7 @@ export default async function handler(req, res) {
     const functionUsed = {};
 
     let foundResult = false;
+    let image;
 
     if (message.function_call) {
       const name = message.function_call.name;
@@ -117,6 +118,12 @@ export default async function handler(req, res) {
             message.content = result;
             functionsFound.push(message.content);
             foundResult = true;
+
+            // try {
+            //   image = await getImage(message.content);
+            // } catch (e) {
+            //   console.error(e);
+            // }
           }
         } catch (e) {
           message.content = e.message;
@@ -148,9 +155,9 @@ export default async function handler(req, res) {
 
     console.dir({ result: { ...message, functionUsed, foundResult } });
 
-    res
-      .status(200)
-      .json({ ...{ result: { ...message, functionUsed, foundResult } } });
+    res.status(200).json({
+      ...{ result: { ...message, functionUsed, foundResult, image } },
+    });
   } catch (error) {
     // Consider adjusting the error handling logic for your use case
     if (error.response) {
@@ -166,3 +173,12 @@ export default async function handler(req, res) {
     }
   }
 }
+
+// const getImage = async (prompt) => {
+//   const response = await openai.createImage({
+//     prompt: `A simple abstract paper drawing of The temperature in Viborg is around 17°C. It's cloudy with a humidity of 55%.`,
+//     n: 1,
+//     size: "256x256",
+//   });
+//   return response.data.data[0].url;
+// };

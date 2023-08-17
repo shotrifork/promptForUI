@@ -61,6 +61,7 @@ export default function Home() {
           />
         </form>
         <p dangerouslySetInnerHTML={{ __html: result?.content }}></p>
+        {result?.image ? <img src={result?.image} /> : ""}
 
         {result ? (
           <div className={styles.result}>
