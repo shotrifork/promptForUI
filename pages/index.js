@@ -1,6 +1,9 @@
+import dynamic from "next/dynamic";
 import Head from "next/head";
 import { useState } from "react";
 import styles from "./index.module.css";
+
+const DynamicMap = dynamic(() => import("../utils/Map"), { ssr: false });
 
 export default function Home() {
   const [promptInput, setPromptInput] = useState("");
@@ -9,6 +12,7 @@ export default function Home() {
 
   async function onSubmit(event) {
     setLoading(true);
+
     event.preventDefault();
     try {
       const response = await fetch("/api/generate", {
@@ -51,7 +55,9 @@ export default function Home() {
             name="prompt"
             placeholder="Tast et prompt"
             value={promptInput}
-            onChange={(e) => setPromptInput(e.target.value)}
+            onChange={(e) => {
+              setPromptInput(e.target.value);
+            }}
           />
 
           <input
@@ -62,6 +68,11 @@ export default function Home() {
         </form>
         <p dangerouslySetInnerHTML={{ __html: result?.content }}></p>
         {result?.image ? <img src={result?.image} /> : ""}
+        {!loading && result?.extra.coord ? (
+          <DynamicMap coord={result.extra.coord} />
+        ) : (
+          ""
+        )}
 
         {result ? (
           <div className={styles.result}>

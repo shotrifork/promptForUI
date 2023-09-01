@@ -21,7 +21,7 @@ export const getWeatherData = async (location, units) => {
       useful.temperature - 273.15
     )} °</h2>
     Det er ${useful.description} med en luftfugtighed på ${useful.humidity}%`;
-    return result;
+    return { result, raw: response.data };
   } catch (error) {
     console.error("Error fetching weather data:", error);
     return null;

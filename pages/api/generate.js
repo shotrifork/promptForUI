@@ -71,20 +71,11 @@ export default async function handler(req, res) {
       temperature: 0.6,
     });
     const message = chatCompletion.data.choices[0].message;
-
-    // const chatCompletionNoFunctions = await openai.createChatCompletion({
-    //   model: "gpt-3.5-turbo",
-    //   messages,
-    //   temperature: 0.6,
-    // });
-    // const messageNoFunctions =
-    //   chatCompletionNoFunctions.data.choices[0].message;
-    // console.log("message: " + JSON.stringify(messageNoFunctions, null, 2));
-
     const functionUsed = {};
 
     let foundResult = false;
     let image;
+    let extra = {};
 
     if (message.function_call) {
       const name = message.function_call.name;
@@ -112,12 +103,15 @@ export default async function handler(req, res) {
       } else if (name === "getWeatherData") {
         const { location, unit } = args;
         try {
-          const result = await getWeatherData(location, unit);
+          const { result, raw } = await getWeatherData(location, unit);
+          extra.coord = raw.coord;
           if (result !== null) {
             functionUsed.result = result;
             message.content = result;
             functionsFound.push(message.content);
             foundResult = true;
+
+            console.log(raw);
 
             // try {
             //   image = await getImage(message.content);
@@ -156,7 +150,7 @@ export default async function handler(req, res) {
     console.dir({ result: { ...message, functionUsed, foundResult } });
 
     res.status(200).json({
-      ...{ result: { ...message, functionUsed, foundResult, image } },
+      ...{ result: { ...message, functionUsed, foundResult, image, extra } },
     });
   } catch (error) {
     // Consider adjusting the error handling logic for your use case
